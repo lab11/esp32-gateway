@@ -9,7 +9,8 @@ We test and deploy the software on the [SparkFun ESP32 Thing](https://www.sparkf
 
 The software for the gateway consists of a number of separate services. 
 - Configuration of Wi-Fi credentials via Bluetooth when Wi-Fi is not yet connected
-- Forwarding of [PowerBlade](https://github.com/lab11/powerblade) data received in BLE advertisements to a configurable endpoint
+- Serial logging of [PowerBlade](https://github.com/lab11/powerblade) data parsed from BLE advertisements
+- Forwarding of PowerBlade data to a configurable Influx endpoint
 - Serving of tools and settings as a web portal on the local network
 
 The [ESP32 Applications repo](https://github.com/lab11/esp32-apps) contains single-purpose applications that demonstrate or test most of these services, as well as a number of other miscellaneous applications.
