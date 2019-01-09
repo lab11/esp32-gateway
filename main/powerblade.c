@@ -37,6 +37,7 @@
 #define get_id_string(id, id_string) for(int i=0; i<6; i++) sprintf(id_string+3*i, "%02x%s", id[i], i<5 ? ":" : "")
 
 static char gateway[17], id[17];
+static uint32_t sequence_nums[0x1000];
 struct timespec tv = {0, 0};
 
 void get_mac() {
@@ -59,16 +60,23 @@ int8_t parse_powerblade_data(uint8_t *id, uint8_t *data, uint8_t length, powerbl
 
     /* PowerBlade Data Packet Check */
     if (!(is_powerblade_data_packet(data))) {
-        ESP_LOGW(TAG,"No parseable data in this packet");
+        // ESP_LOGW(TAG,"No parseable data in this packet");
         return 0;
     }
 
     /* Retrieve system time */
     clock_gettime(CLOCK_REALTIME, &tv);
 
+    /* Check for new sequence number */
+    uint16_t idx = 0xFFF & ((id[4]<<8) + id[5]);
+    uint32_t sequence_num = data[9]<<24 | data[10]<<16 | data[11]<<8 | data[12];
+    if (sequence_num == sequence_nums[idx]) {
+        return 0;
+    }
+    sequence_nums[idx] = sequence_num;
+
     /* Parse packet */
     /* Example AD: 02 01 06 17 ff e0 02 11 02 00 54 8a 1d 4f ff 79 09 c8 0c 83 0c b7 01 11 98 ba 42 */
-    uint32_t sequence_num   = data[9]<<24 | data[10]<<16 | data[11]<<8 | data[12];
     uint32_t pscale         = data[13]<<8 | data[14];
     uint32_t vscale         = data[15];
     uint32_t whscale        = data[16];
