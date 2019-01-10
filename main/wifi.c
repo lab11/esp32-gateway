@@ -14,6 +14,7 @@
 #include "esp_http_client.h"
 #include "lwip/apps/sntp.h"
 #include "lwip/api.h"
+#include "nvs_flash.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
 #include "mdns.h"
@@ -76,6 +77,10 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
             break;
     }
     return ESP_OK;
+}
+
+void initialize_nvs() {
+    ESP_ERROR_CHECK( nvs_flash_init() );
 }
 
 void initialize_wifi() {

@@ -11,7 +11,7 @@
 #ifndef _WIFI_H_
 #define _WIFI_H_
 
-#define initialize_nvs() ESP_ERROR_CHECK( nvs_flash_init() )
+void initialize_nvs();
 
 void initialize_wifi();
 
