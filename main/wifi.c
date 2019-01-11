@@ -29,14 +29,17 @@
             "<title>ESP32 Config</title>" \
             "<meta name='viewport' content='width=device-width,initial-scale=1.0'>" \
             "<style>" \
-                "* {color:#fff; font-family:monospace; text-align:center; padding:0; border:none;}" \
+                "* {color:#333; font-family:monospace; text-align:center; padding:0; border:none;}" \
+                "h2 {background:#e43; color:#fff; padding: 2vh 0;}" \
+                "body {background:#fff; margin:0; font-family:monospace; text-align:center}" \
                 "input {background:#0003; width:90vw; height:8vh; font-size:3.75vh; margin:1vh 0; outline:none; -webkit-appearance: none;}" \
                 "input:read-only {background:#0000}" \
+                "iframe {display:none}" \
             "</style>" \
         "</head>" \
-        "<body style='background:#e43; color:#fff; font-family:monospace; text-align:center'>" \
+        "<body>" \
             "<h2>ESP32 Config</h2><br/>" \
-            "<p>NETWORK<br/><input id='ssid' type='text' value='%s' readonly /></p>" \
+            "<p>NETWORK (<a href='javascript:disconnect()'>DISCONNECT</a>)<br/><input id='ssid' type='text' value='%s' readonly /></p>" \
             "<p>UPTIME<br/><input id='time' type='text' value='%ds' readonly /></p>" \
             "<p>INFLUX HOST<br/><input id='host' type='text' value='%s' /></p>" \
             "<p>INFLUX DATABASE<br/><input id='datb' type='text' value='%s' /></p>" \
@@ -44,8 +47,10 @@
             "<p>INFLUX PASSWORD (optional)<br/><input id='pswd' type='text' value='' /></p>" \
             "<iframe style='display:none'></iframe>" \
             "<script>" \
+                "request = r => document.querySelector('iframe').contentWindow.location.href = '/' + r;" \
+                "disconnect = _ => request( 'disconnect' );" \
                 "document.querySelectorAll('input').forEach( i => {" \
-                    "i.onblur = _ => document.querySelector('iframe').contentWindow.location.href = '/' + i.id + '=' + i.value;" \
+                    "i.onblur = _ =>  request( i.id + '=' + i.value );" \
                     "i.addEventListener('keyup', e => e.keyCode == 13 && i.blur() );" \
                 "});" \
             "</script>" \
