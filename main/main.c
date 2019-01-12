@@ -19,12 +19,13 @@
 #include "ble.h"
 
 #define TAG "GATEWAY"
+#define BATCH_SIZE 100
 
-static powerblade_item items[100];
+static powerblade_item items[BATCH_SIZE];
 static int items_start = 0, items_end = 0;
 
 /* Strings */
-static char body[32768], entry[512];
+static char body[BATCH_SIZE*0x100], entry[0x200];
 
 static void http_post_task() {
     while (1) {
@@ -36,7 +37,7 @@ static void http_post_task() {
                 powerblade_item_to_influx_string(&items[n], entry);
                 sprintf(body, "%s %s", body, entry);
             }
-            ESP_LOGI(TAG, "HTTP POST %d Items to Influx", (n-items_start+100)%100);
+            ESP_LOGI(TAG, "HTTP POST %d Items to Influx", (n-items_start+BATCH_SIZE)%BATCH_SIZE);
             if (http_post_to_influx(body) == 204) {
                 items_start = n; // update cursor on influx success (status == 204)
             }
