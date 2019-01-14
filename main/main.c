@@ -7,12 +7,8 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
-#include <string.h>
-#include "freertos/FreeRTOS.h"
-#include "nvs_flash.h"
 #include "esp_event_loop.h"
 #include "esp_log.h"
-#include "nvs_flash.h"
 
 #include "powerblade.h"
 #include "wifi.h"
