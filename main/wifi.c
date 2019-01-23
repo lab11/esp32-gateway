@@ -18,44 +18,10 @@
 #include "esp_wifi.h"
 #include "esp_log.h"
 #include "mdns.h"
+#include "www.h"
 #include "wifi.h"
 
 #define TAG "COMPONENT:WIFI"
-
-/* Config Web Page - Should eventually move to own file */
-#define HTML "HTTP/1.1 200 OK\r\n Content-Type:text/html\r\n\r\n" \
-    "<html>" \
-        "<head>" \
-            "<title>ESP32 Config</title>" \
-            "<meta name='viewport' content='width=device-width,initial-scale=1.0'>" \
-            "<style>" \
-                "* {color:#333; font-family:monospace; text-align:center; padding:0; border:none;}" \
-                "h2 {background:#e43; color:#fff; padding: 2vh 0;}" \
-                "body {background:#fff; margin:0; font-family:monospace; text-align:center}" \
-                "input {background:#0003; width:90vw; height:8vh; font-size:3.75vh; margin:1vh 0; outline:none; -webkit-appearance: none;}" \
-                "input:read-only {background:#0000}" \
-                "iframe {display:none}" \
-            "</style>" \
-        "</head>" \
-        "<body>" \
-            "<h2>ESP32 Config</h2><br/>" \
-            "<p>NETWORK (<a href='javascript:disconnect()'>DISCONNECT</a>)<br/><input id='ssid' type='text' value='%s' readonly /></p>" \
-            "<p>UPTIME<br/><input id='time' type='text' value='%ds' readonly /></p>" \
-            "<p>INFLUX HOST<br/><input id='host' type='text' value='%s' /></p>" \
-            "<p>INFLUX DATABASE<br/><input id='datb' type='text' value='%s' /></p>" \
-            "<p>INFLUX USER (optional)<br/><input id='user' type='text' value='' /></p>" \
-            "<p>INFLUX PASSWORD (optional)<br/><input id='pswd' type='text' value='' /></p>" \
-            "<iframe style='display:none'></iframe>" \
-            "<script>" \
-                "request = r => document.querySelector('iframe').contentWindow.location.href = '/' + r;" \
-                "disconnect = _ => request( 'disconnect' );" \
-                "document.querySelectorAll('input').forEach( i => {" \
-                    "i.onblur = _ =>  request( i.id + '=' + i.value );" \
-                    "i.addEventListener('keyup', e => e.keyCode == 13 && i.blur() );" \
-                "});" \
-            "</script>" \
-        "</body>" \
-    "</html>"
 
 /* Event group to signal when Wi-Fi is connected */
 static EventGroupHandle_t wifi_group;
@@ -152,8 +118,9 @@ void http_serve_task(void *pvParameters) {
     }
     netconn_bind(nc, IP_ADDR_ANY, 80);
     netconn_listen(nc);
-    char buf[2048];
+    char buf[4096], rst = 0;
     while (1) {
+        vTaskDelay( 0 );
         if ( netconn_accept(nc, &client) == ERR_OK ) {
             struct netbuf *nb;
             if ( netconn_recv(client, &nb) == ERR_OK ) {
@@ -163,19 +130,27 @@ void http_serve_task(void *pvParameters) {
                 /* If request is GET, send HTML response */
                 if (!strncmp(data, "GET ", 4)) {
                     ESP_LOGI(TAG,"Received data:\n%.*s\n", len, (char*)data);
-
-                    u16_t vlen = (void*) strstr(data," HTTP/") - data - 10;
-                    if (!strncmp(data+4, "/host=", 6)) {
-                        strncpy(host,data+10,vlen);
-                        host[vlen] = 0;
-                        ESP_LOGI(TAG,"host: %s, len: %d",host,vlen);
-                    } else if (!strncmp(data+4, "/datb=", 6)) {
-                        strncpy(db,data+10,vlen);
-                        db[vlen] = 0;
-                        ESP_LOGI(TAG,"db: %s, len: %d",db,vlen);
-                    } 
-                    snprintf(buf, sizeof(buf), HTML, CONFIG_WIFI_SSID, xTaskGetTickCount()*portTICK_PERIOD_MS/1000, host, db);
-                    netconn_write(client, buf, strlen(buf), NETCONN_COPY);
+                    if (!strncmp(data+4, "/favicon.ico", 12)) {
+                        netconn_write(client,"HTTP/1.1 200 OK\r\n Content-Type:image/png\r\n\r\n",44,NETCONN_COPY);
+                        netconn_write(client,main_www_favicon_ico,main_www_favicon_ico_len,NETCONN_NOFLAG);
+                    } else {
+                        u16_t vlen = (void*) strstr(data," HTTP/") - data - 10;
+                        if (!strncmp(data+4, "/host=", 6)) {
+                            strncpy(host,data+10,vlen);
+                            host[vlen] = 0;
+                            ESP_LOGI(TAG,"host: %s, len: %d",host,vlen);
+                        } else if (!strncmp(data+4, "/datb=", 6)) {
+                            strncpy(db,data+10,vlen);
+                            db[vlen] = 0;
+                            ESP_LOGI(TAG,"db: %s, len: %d",db,vlen);
+                        } else if (!strncmp(data+4, "/reset", 6)) {
+                            ESP_LOGW(TAG,"Reset");
+                            rst = 1;
+                        }
+                        sprintf(buf, (const char*) main_www_index_html, CONFIG_WIFI_SSID, db, host, xTaskGetTickCount()*portTICK_PERIOD_MS/1000);
+                        netconn_write(client, "HTTP/1.1 200 OK\r\n Content-Type:text/html\r\n\r\n", 44, NETCONN_COPY);
+                        netconn_write(client, buf, strlen(buf), NETCONN_COPY);
+                    }
                 }
             }
             netbuf_delete(nb);
@@ -183,6 +158,10 @@ void http_serve_task(void *pvParameters) {
         ESP_LOGI(TAG,"Closing connection");
         netconn_close(client);
         netconn_delete(client);
+        if (rst) {
+            esp_wifi_disconnect();
+            esp_restart();
+        }
     }
 }
 

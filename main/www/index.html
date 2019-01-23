@@ -1,0 +1,82 @@
+<html>
+ <head>
+  <title>PowerBlade Gateway Settings</title>
+  <meta name='viewport' content='width=device-width,initial-scale=1.0'>
+  <style>
+   * {font-family:monospace; text-align:center; font-size:2vh}
+   a {color:#bdf; text-decoration:none;}
+   p {margin:3vh 5vw 0; padding:0 0 0 2vw; line-height:4vh; font-weight:bold; text-align:left} 
+   p a {float:right; padding:0 2vw}
+   h2 {padding:4vh 0; font-size:3vh; margin:0 0 6vh; box-shadow: 0 2px 6px #0004}
+   img {height:8vh; margin:0 0 2vh}
+   div {background: #fff; position:fixed; height:100vh; width:100vw; left:0; top:110vh; transition: top .5s; box-shadow:0 -2px 6px #0008}
+   input {background:#bdf; color:#16b; width:90vw; height:8vh; font-size:3vh; margin:0 0 1vh; padding:0 2vw; outline:none; border:none; border-radius:0; -webkit-appearance:none; text-overflow:ellipsis}
+   input::placeholder {color:#28d8}
+   input:focus::placeholder {color:#fff8}
+   .on {top:0}
+   #cover {opacity:.5}
+   #confirm, #offline, #influx :focus, p {background:#28d; color:#fff}
+   #cancel {background:none; border:2px solid #28d; color:#28d; margin: 3vh 0 1vh}
+   #influx [type=button]:hover, #influx [type=button]:focus, a:hover, h2 {background:#16b; color:#fff; cursor:pointer}
+  </style>
+ </head>
+ <body>
+  <div class='on'>
+    <h2><img src='favicon.ico'/><br/>GATEWAY SETTINGS</h2>
+    <p>WIFI NETWORK <a href='javascript:disconnect()'>DISCONNECT</a></p>
+    <input id='ssid' type='text' value='%s' readonly />
+    <p>INFLUX ENDPOINT <a href='javascript:change()'>CHANGE</a></p>
+    <input id='iflx' type='text' value='%s @ %s' readonly/>
+    <p>GATEWAY UPTIME <a href='javascript:reset()'>RESTART</a></p>
+    <input id='time' type='text' value='%ds' readonly />
+  </div>
+  <div id='influx'>
+    <h2>INFLUX ENDPOINT</h2>
+    <input id='host' type='text' placeholder='https://influx.host:8086' /><br/>
+    <input id='datb' type='text' placeholder='database' /><br/>
+    <input id='user' type='text' placeholder='username' /><br/>
+    <input id='pswd' type='text' placeholder='password' /><br/> 
+    <input id='cancel' type='button' value='CANCEL'/><br/>
+    <input id='confirm' type='button' value='CONFIRM'/><br/>
+  </div>
+  <div id='offline'><br/>PowerBlade Gateway offline.<br/>Use <a href='https://github.com/lab11/summon'>Summon</a> to reconnect via Bluetooth.</div>
+  <div id='cover'></div>
+  <script>
+   $ = s => document.querySelector(s);
+   $$ = s => document.querySelectorAll(s);
+   disconnect = _ => {
+    if (confirm('Disconnect gateway from \"' + $('#ssid').value + '\"? This page will no longer be accessible.')) {
+     fetch( 'disconnect' );
+     $('#offline').className = 'on';
+    }
+   };
+   reset = _ => {
+    if (confirm('Restart gateway? This page will be offline for a brief period.')) {
+     fetch( 'reset' ).then( _ => { location.reload() } );
+    }
+   };
+   change = _ => {
+     $('#influx').className = 'on';
+   }
+   $('#confirm').onclick = _ => {
+    host = $('#host').value;
+    $('#cover').className = 'on';
+    fetch( (host.startsWith('http')?'':'https://') + host + '/query?db=' + $('#datb').value + ($('#user').value ? '&u=' + $('#user').value : '') + ($('#pswd').value ? '&p=' + $('#pswd').value : '') + '&q=select * from /.*/ limit 1')
+     .then(r=>r.status==200).then( r => {
+      if (r) {
+       $$('#influx [type=text]').forEach( v => fetch( v.id + '=' + v.value ) );
+       $('#iflx').value = $('#datb').value + ' @ ' + $('#host').value;
+       $('#influx').className = '';
+      }
+      $('#cover').className = '';
+     }).catch(e=>{
+       alert('Influx endpoint not valid:\n'+e.toString())
+       $('#cover').className = '';
+     });
+  };
+  $('#cancel').onclick = _ => {
+   $('#influx').className = '';
+  };
+  </script>
+ </body>
+</html>

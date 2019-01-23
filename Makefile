@@ -7,3 +7,4 @@ PROJECT_NAME := esp32-gateway
 
 include $(IDF_PATH)/make/project.mk
 
+all: | $(shell for file in main/www/*; do xxd -i $$file; done > main/www.h)
