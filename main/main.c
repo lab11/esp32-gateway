@@ -50,10 +50,8 @@ static void ble_scan_result_callback(struct ble_scan_result_evt_param sr) {
 
 void app_main() {
     initialize_nvs();                         // Initialize non-volatile storage
-    initialize_wifi();                        // Set up Wi-Fi & connect to network, if specified
-    initialize_server();                      // Serve config page on the local network
-    initialize_mdns("ESP32");                 // Advertise over mDNS / ZeroConf / Bonjour
     initialize_ble(ble_scan_result_callback); // Set up BLE & register scan result callback
-    
+    initialize_wifi();                        // Set up Wi-Fi & connect to network, if specified    
+
     xTaskCreate(&http_post_task, "http_post_task", 32*configMINIMAL_STACK_SIZE, NULL, 10, NULL); // Initiate looped HTTP POST task
 }

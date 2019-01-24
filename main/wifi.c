@@ -26,21 +26,41 @@
 /* Event group to signal when Wi-Fi is connected */
 static EventGroupHandle_t wifi_group;
 
+/* Values for Influx Endpoint */
+static char host[128] = CONFIG_HOST, datb[32] = CONFIG_DATB, user[32] = CONFIG_USER, pswd[32] = CONFIG_PSWD;
+
 static char recv_buf[64], url[256];
-static char host[128] = CONFIG_HOST;
-static char db[64] = CONFIG_DB;
+static char ip[16] = "";
+static char ssid[32] = "";
+static wifi_config_t sta_config = { .sta={.ssid=CONFIG_WIFI_SSID,.password=CONFIG_WIFI_PASSWORD} };
+
+nvs_handle storage;
 
 static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
     switch(event->event_id) {
         case SYSTEM_EVENT_STA_START:
+            nvs_open("storage", NVS_READWRITE, &storage);
+            size_t ssid_len = 32, pswd_len = 64;
+            nvs_get_str(storage, "ssid", (char*)sta_config.sta.ssid, &ssid_len);
+            nvs_get_str(storage, "pswd", (char*)sta_config.sta.password, &pswd_len);
+            nvs_close(storage);
+            esp_wifi_set_config(WIFI_IF_STA, &sta_config);
             esp_wifi_connect();
             break;
         case SYSTEM_EVENT_STA_GOT_IP:
             xEventGroupSetBits(wifi_group, BIT0);
-            ESP_LOGI(TAG, "Connected to network: %s", CONFIG_WIFI_SSID);
-            initialize_sntp();
+            nvs_open("storage", NVS_READWRITE, &storage);
+            nvs_set_str(storage, "ssid", (char*)sta_config.sta.ssid);
+            nvs_set_str(storage, "pswd", (char*)sta_config.sta.password);
+            nvs_close(storage);
+            strcpy(ssid, (char*)sta_config.sta.ssid);
+            ESP_LOGI(TAG, "Connected to network: %s", ssid);
+            initialize_server();      // Serve config page on the local network
+            initialize_mdns("ESP32"); // Advertise over mDNS / ZeroConf / Bonjour
+            initialize_sntp();        // Set time
             break;
         case SYSTEM_EVENT_STA_DISCONNECTED:
+            ESP_LOGI(TAG, "Disconnected from network");
             esp_wifi_connect();
             xEventGroupClearBits(wifi_group, BIT0);
             break;
@@ -51,20 +71,31 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 }
 
 void initialize_nvs() {
-    ESP_ERROR_CHECK( nvs_flash_init() );
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    nvs_open("storage", NVS_READWRITE, &storage);
+    size_t host_len = 128, cred_len = 32;
+    nvs_get_str(storage, "iflx_host", host, &host_len);
+    nvs_get_str(storage, "iflx_datb", datb, &cred_len);
+    nvs_get_str(storage, "iflx_user", user, &cred_len);
+    nvs_get_str(storage, "iflx_pswd", pswd, &cred_len);
+    nvs_close(storage);
+    ESP_ERROR_CHECK(ret);
 }
 
 void initialize_wifi() {
+    esp_log_level_set("wifi", ESP_LOG_NONE);
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    wifi_config_t wifi_config = { .sta={.ssid=CONFIG_WIFI_SSID,.password=CONFIG_WIFI_PASSWORD} };
     wifi_group = xEventGroupCreate();
     tcpip_adapter_init();
-    ESP_LOGI(TAG, "Connecting to Wi-Fi network: %s...", wifi_config.sta.ssid);
+    ESP_LOGI(TAG, "Connecting to Wi-Fi network: %s...", sta_config.sta.ssid);
     ESP_ERROR_CHECK( esp_event_loop_init(wifi_event_handler, NULL) );
     ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
     ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
     ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );
-    ESP_ERROR_CHECK( esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config) );
     ESP_ERROR_CHECK( esp_wifi_start() );
     xEventGroupWaitBits(wifi_group, BIT0, false, true, portMAX_DELAY);
 }
@@ -86,7 +117,6 @@ int http_post(char *url, char *body) {
     uint8_t status = 0;
     esp_http_client_config_t config = { .url = url };
     esp_http_client_handle_t client = esp_http_client_init(&config);
-    esp_http_client_set_url(client, url);
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_post_field(client, body, strlen(body));
     esp_err_t error = esp_http_client_perform(client);
@@ -106,9 +136,15 @@ int http_post(char *url, char *body) {
 }
 
 int http_post_to_influx(char *body) {
-    sprintf(url, "%s/write?db=%s", host, db);
+    if (user[0] && pswd[0]) {
+        sprintf(url, "%s/write?db=%s&u=%s&p=%s", host, datb, user, pswd);
+    } else {
+        sprintf(url, "%s/write?db=%s", host, datb);
+    }
     return http_post(url, body);
 }
+
+
 
 void http_serve_task(void *pvParameters) {
     struct netconn *client, *nc = netconn_new(NETCONN_TCP);
@@ -135,19 +171,38 @@ void http_serve_task(void *pvParameters) {
                         netconn_write(client,main_www_favicon_ico,main_www_favicon_ico_len,NETCONN_NOFLAG);
                     } else {
                         u16_t vlen = (void*) strstr(data," HTTP/") - data - 10;
+                        nvs_open("storage", NVS_READWRITE, &storage);
                         if (!strncmp(data+4, "/host=", 6)) {
                             strncpy(host,data+10,vlen);
                             host[vlen] = 0;
-                            ESP_LOGI(TAG,"host: %s, len: %d",host,vlen);
+                            nvs_set_str(storage, "iflx_host", host);
+                            ESP_LOGI(TAG,"Assign Influx Host: %s, len: %d",host,vlen);
                         } else if (!strncmp(data+4, "/datb=", 6)) {
-                            strncpy(db,data+10,vlen);
-                            db[vlen] = 0;
-                            ESP_LOGI(TAG,"db: %s, len: %d",db,vlen);
+                            strncpy(datb,data+10,vlen);
+                            datb[vlen] = 0;
+                            nvs_set_str(storage, "iflx_datb", datb);
+                            ESP_LOGI(TAG,"Assign Influx Database: %s, len: %d",datb,vlen);
+                        } else if (!strncmp(data+4, "/user=", 6)) {
+                            strncpy(user,data+10,vlen);
+                            user[vlen] = 0;
+                            nvs_set_str(storage, "iflx_user", user);
+                            ESP_LOGI(TAG,"Assign Influx Credentials: %s, len: %d",user,vlen);
+                        } else if (!strncmp(data+4, "/pswd=", 6)) {
+                            strncpy(pswd,data+10,vlen);
+                            pswd[vlen] = 0;
+                            nvs_set_str(storage, "iflx_pswd", pswd);
+                        } else if (!strncmp(data+4, "/disconnect", 11)) {
+                            ESP_LOGW(TAG,"Disconnect");
+                            nvs_erase_key(storage, "ssid");
+                            nvs_erase_key(storage, "pswd");
+                            sta_config.sta.ssid[0] = 0;
+                            sta_config.sta.password[0] = 0;
+                            rst = 1;
                         } else if (!strncmp(data+4, "/reset", 6)) {
                             ESP_LOGW(TAG,"Reset");
                             rst = 1;
                         }
-                        sprintf(buf, (const char*) main_www_index_html, CONFIG_WIFI_SSID, db, host, xTaskGetTickCount()*portTICK_PERIOD_MS/1000);
+                        sprintf(buf, (const char*) main_www_index_html, ssid, datb, host, xTaskGetTickCount()*portTICK_PERIOD_MS/1000);
                         netconn_write(client, "HTTP/1.1 200 OK\r\n Content-Type:text/html\r\n\r\n", 44, NETCONN_COPY);
                         netconn_write(client, buf, strlen(buf), NETCONN_COPY);
                     }
@@ -155,7 +210,7 @@ void http_serve_task(void *pvParameters) {
             }
             netbuf_delete(nb);
         }
-        ESP_LOGI(TAG,"Closing connection");
+        // ESP_LOGI(TAG,"Closing connection");
         netconn_close(client);
         netconn_delete(client);
         if (rst) {
