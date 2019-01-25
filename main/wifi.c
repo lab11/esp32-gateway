@@ -55,6 +55,8 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
             nvs_close(storage);
             strcpy(ssid, (char*)sta_config.sta.ssid);
             ESP_LOGI(TAG, "Connected to network: %s", ssid);
+            // http_get_ip();
+            connect_callback();
             initialize_server();      // Serve config page on the local network
             initialize_mdns("ESP32"); // Advertise over mDNS / ZeroConf / Bonjour
             initialize_sntp();        // Set time
@@ -64,6 +66,23 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
             esp_wifi_connect();
             xEventGroupClearBits(wifi_group, BIT0);
             break;
+        // case SYSTEM_EVENT_SCAN_DONE: {
+        //     uint16_t apCount = 0;
+        //     esp_wifi_scan_get_ap_num(&apCount);
+        //     if (apCount == 0) {
+        //         ESP_LOGI(TAG, "No AP found");
+        //         break;
+        //     }
+        //     wifi_ap_record_t *ap_list = (wifi_ap_record_t *)malloc(sizeof(wifi_ap_record_t) * apCount);
+        //     if (!ap_list) {
+        //         ESP_LOGE(TAG, "malloc error, ap_list is NULL");
+        //         break;
+        //     }
+        //     ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&apCount, ap_list));
+        //     esp_wifi_scan_stop();
+        //     free(ap_list);
+        //     break;
+        // }
         default:
             break;
     }
@@ -111,6 +130,16 @@ void initialize_sntp() {
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
     sntp_setservername(0, "pool.ntp.org");
     sntp_init();
+}
+
+void http_get_ip(char *url, char *body) {
+    esp_http_client_config_t config = { .url = "http://api.ipify.org" };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (!esp_http_client_perform(client)) {
+        esp_http_client_read(client, ip, sizeof(ip)-1);
+        ESP_LOGI(TAG,"PUBLIC IP: %s",ip);
+    }
+    esp_http_client_cleanup(client);
 }
 
 int http_post(char *url, char *body) {
@@ -218,6 +247,18 @@ void http_serve_task(void *pvParameters) {
             esp_restart();
         }
     }
+}
+
+char* get_ssid() {
+    return ssid;
+}
+
+void set_ssid(char *ssid_value, char *pswd_value) {
+    strcpy((char*)sta_config.sta.ssid, ssid_value);
+    strcpy((char*)sta_config.sta.password, pswd_value);
+    ESP_LOGI(TAG, "Attempting to connect to '%s'", ssid_value);
+    esp_wifi_set_config(WIFI_IF_STA, &sta_config);
+    esp_wifi_connect();
 }
 
 void initialize_server() {

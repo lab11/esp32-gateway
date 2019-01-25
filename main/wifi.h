@@ -25,4 +25,14 @@ int http_post(char *url, char *body);
 
 int http_post_to_influx(char *body);
 
+void http_get_ip();
+
+char* get_ssid();
+
+void set_ssid(char *ssid_value, char *pswd_value);
+
+void (* connect_callback)();
+
+void (* disconnect_callback)();
+
 #endif

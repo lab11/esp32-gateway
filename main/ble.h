@@ -15,6 +15,12 @@
 
 void (* scan_result_callback)(struct ble_scan_result_evt_param sr);
 
-void initialize_ble(void (*callback)(struct ble_scan_result_evt_param sr));
+char* (* read_callback)();
+
+void (* write_callback)(char *ssid, char *pswd);
+
+void initialize_ble(void (*scan)(struct ble_scan_result_evt_param sr), char* (*read)(), void (*write)(char *ssid, char *pswd));
+
+void close_gatt();
 
 #endif
