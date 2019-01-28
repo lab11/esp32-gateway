@@ -16,26 +16,34 @@ The software for the gateway consists of a number of separate services.
 The [ESP32 Applications repo](https://github.com/lab11/esp32-apps) contains single-purpose applications that demonstrate or test most of these services, as well as a number of other miscellaneous applications.
 
 
-Setup & Run
------------
+Setup
+-----
 
 To set up the software environment on your machine, follow the [Espressif documentation](https://esp-idf.readthedocs.io/en/latest/get-started/index.html).
 
-While in the ESP32 Gateway repo, use `make menuconfig` to access the configuration menu.
+Connect the device via USB and [find the appropriate serial port](https://esp-idf.readthedocs.io/en/latest/get-started/index.html#configure).
 
-Connect the device via USB and [set the appropriate serial port](https://esp-idf.readthedocs.io/en/latest/get-started/index.html#configure).
+While in the ESP32 Gateway repo, `make menuconfig` can be used to access the configuration menu, and optionally set default Wi-Fi credentials and InfluxDB endpoint. Hit `Q` to exit.
 
-Optionally, Wi-Fi credentials and InfluxDB endpoint can be set as well.
+Wi-Fi and InfluxDB credentials can also be changed after the gateway is programmed using a phone or browser. View [startup guide](https://docs.google.com/presentation/d/1h3oxfZpgNazQ42Ug1GeqB8SHxXWLkpt178d12G6gJQw/edit?usp=sharing) for instructions.
 
-Use `make flash monitor` to build the project, flash the binary to the device, and display serial output from the device.
+
+Run
+---
+
+Use `make all flash monitor` to generate necessary files, build the project, flash the binary to the device, and display serial output from the device.
 
 Hit `CTRL + ]` to halt serial monitoring.
+
+View [startup guide](https://docs.google.com/presentation/d/1h3oxfZpgNazQ42Ug1GeqB8SHxXWLkpt178d12G6gJQw/edit?usp=sharing) for tips on configuring and deploying the programmed gateway with PowerBlades.
 
 <!--
 
 The follow `make` commands are useful:
 
-- `make`: Builds project
+- `make` | `make build`: Builds project
+
+- `make all` : Builds project & generates www.h header from www directory
 
 - `make menuconfig`: Access configuration menu
 
@@ -44,5 +52,7 @@ The follow `make` commands are useful:
 - `make monitor`: Restart device and display serial output from device
 
 - `make flash monitor`: Build project, flash device
+
+- `make all flash monitor` : Generate www, build project, flash device
 
 -->
