@@ -45,6 +45,9 @@ static void ble_scan_result_callback(struct ble_scan_result_evt_param sr) {
     /* If ad is PowerBlade data, populate current item with parsed values & point to next item */
     if (parse_powerblade_data(sr.bda, sr.ble_adv, sr.adv_data_len, &items[items_end])) {
         items_end = (items_end + 1) % (sizeof(items) / sizeof(powerblade_item));
+        if ((items_end-items_start+BATCH_SIZE)%BATCH_SIZE==BATCH_SIZE-1) {
+            esp_restart();
+        }
     }
 }
 
