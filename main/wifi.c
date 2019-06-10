@@ -127,6 +127,9 @@ void initialize_mdns(char *mdns_name) {
 }
 
 void initialize_sntp() {
+    if ( sntp_enabled() ) {
+        sntp_stop();
+    }
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
     sntp_setservername(0, "pool.ntp.org");
     sntp_init();
