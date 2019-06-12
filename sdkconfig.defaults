@@ -12,7 +12,7 @@ BT_BLE_DYNAMIC_ENV_MEMORY=y
 CONFIG_TASK_WDT_PANIC=y
 CONFIG_ESP32_PANIC_SILENT_REBOOT=y
 
-# Specify custom partitions (app requires higher allocation than default)
+# Specify custom partitions (app requires higher memory allocation than default)
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 CONFIG_PARTITION_TABLE_CUSTOM_APP_BIN_OFFSET=0x10000
