@@ -15,6 +15,7 @@
 #include "lwip/apps/sntp.h"
 #include "lwip/api.h"
 #include "nvs_flash.h"
+#include "esp_coexist.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
 #include "mdns.h"
@@ -151,7 +152,9 @@ int http_post(char *url, char *body) {
     esp_http_client_handle_t client = esp_http_client_init(&config);
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_post_field(client, body, strlen(body));
+    esp_coex_preference_set(ESP_COEX_PREFER_WIFI);
     esp_err_t error = esp_http_client_perform(client);
+    esp_coex_preference_set(ESP_COEX_PREFER_BT);
     if (error) {
         ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(error));
     } else {
