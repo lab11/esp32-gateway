@@ -7,6 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
+#include <string.h>
 #include "esp_event_loop.h"
 #include "esp_log.h"
 
@@ -21,7 +22,7 @@ static powerblade_item items[BATCH_SIZE];
 static int items_start = 0, items_end = 0;
 
 /* Strings */
-static char body[BATCH_SIZE*0x100], entry[0x200];
+static char body[BATCH_SIZE*0x100], entry[0x100];
 
 static void http_post_task() {
     while (1) {
@@ -31,7 +32,7 @@ static void http_post_task() {
             int n = items_start;
             for (body[0] = 0; n != items_end; n = (n + 1) % (sizeof(items) / sizeof(powerblade_item))) {
                 powerblade_item_to_influx_string(&items[n], entry);
-                sprintf(body, "%s %s", body, entry);
+                strcat(body, entry);
             }
             ESP_LOGI(TAG, "HTTP POST %d Items to Influx", (n-items_start+BATCH_SIZE)%BATCH_SIZE);
             if (http_post_to_influx(body) == 204) {
