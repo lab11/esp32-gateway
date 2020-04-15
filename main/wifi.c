@@ -37,6 +37,10 @@ static wifi_config_t sta_config = { .sta={.ssid=CONFIG_WIFI_SSID,.password=CONFI
 
 nvs_handle storage;
 
+/* Callback functions assigned in initialize_wifi() */
+void (* connect_callback)();
+void (* disconnect_callback)();
+
 static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
     switch(event->event_id) {
         case SYSTEM_EVENT_STA_START:
@@ -57,7 +61,7 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
             strcpy(ssid, (char*)sta_config.sta.ssid);
             ESP_LOGI(TAG, "Connected to network: %s", ssid);
             // http_get_ip();
-            connect_callback();
+            connect_callback();       // Run main app's callback
             initialize_server();      // Serve config page on the local network
             initialize_mdns("ESP32"); // Advertise over mDNS / ZeroConf / Bonjour
             initialize_sntp();        // Set time
@@ -106,10 +110,12 @@ void initialize_nvs() {
     ESP_ERROR_CHECK(ret);
 }
 
-void initialize_wifi() {
+void initialize_wifi(void (* connect)(), void (* disconnect)()) {
     esp_log_level_set("wifi", ESP_LOG_NONE);
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     wifi_group = xEventGroupCreate();
+    connect_callback = connect;
+    disconnect_callback = disconnect;
     tcpip_adapter_init();
     ESP_LOGI(TAG, "Connecting to Wi-Fi network: %s...", sta_config.sta.ssid);
     ESP_ERROR_CHECK( esp_event_loop_init(wifi_event_handler, NULL) );

@@ -98,6 +98,11 @@ typedef struct {
 
 static prepare_type_env_t a_prepare_write_env;
 
+/* Callback functions assigned in initialize_ble() */
+void (* scan_result_callback)(struct ble_scan_result_evt_param sr);
+char* (* read_callback)();
+void (* write_callback)(char *ssid, char *pswd);
+
 void write_event_env(esp_gatt_if_t gatts_if, prepare_type_env_t *prepare_write_env, esp_ble_gatts_cb_param_t *param) {
     esp_gatt_status_t status = ESP_GATT_OK;
     if (param->write.need_rsp){

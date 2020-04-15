@@ -42,7 +42,7 @@ static void http_post_task() {
     }
 }
 
-static void ble_scan_result_callback(struct ble_scan_result_evt_param sr) {
+static void scan_result_callback(struct ble_scan_result_evt_param sr) {
     /* If ad is PowerBlade data, populate current item with parsed values & point to next item */
     if (parse_powerblade_data(sr.bda, sr.ble_adv, sr.adv_data_len, &items[items_end])) {
         items_end = (items_end + 1) % (sizeof(items) / sizeof(powerblade_item));
@@ -53,10 +53,9 @@ static void ble_scan_result_callback(struct ble_scan_result_evt_param sr) {
 }
 
 void app_main() {
-    initialize_nvs();                         // Initialize non-volatile storage
-    initialize_ble(ble_scan_result_callback, get_ssid, set_ssid); // Set up BLE & register callbacks
-    connect_callback = close_gatt;
-    initialize_wifi();                        // Set up Wi-Fi & connect to network, if specified    
+    initialize_nvs();                                         // Initialize non-volatile storage
+    initialize_ble(scan_result_callback, get_ssid, set_ssid); // Set up BLE & register callbacks
+    initialize_wifi(close_gatt, NULL);                        // Set up Wi-Fi & connect to network, if specified    
 
     xTaskCreate(&http_post_task, "http_post_task", 32*configMINIMAL_STACK_SIZE, NULL, 10, NULL); // Initiate looped HTTP POST task
 }

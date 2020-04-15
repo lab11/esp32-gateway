@@ -31,8 +31,4 @@ char* get_ssid();
 
 void set_ssid(char *ssid_value, char *pswd_value);
 
-void (* connect_callback)();
-
-void (* disconnect_callback)();
-
 #endif
