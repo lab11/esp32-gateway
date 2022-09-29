@@ -34,7 +34,7 @@ static void http_post_task() {
             int n = items_start;
             for (body[0] = 0; n != items_end; n = (n + 1) % (sizeof(items) / sizeof(powerblade_item))) {
                 powerblade_item_to_influx_string(&items[n], entry);
-                sprintf(body, "%s %s", body, entry);
+                //sprintf(body, "%s %s", body, entry);
             }
             ESP_LOGI(TAG, "HTTP POST %d Items to Influx", (n-items_start+100)%100);
             if (http_post_to_influx(body) == 204) {

@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "esp_system.h"
 #include "powerblade.h"
 
@@ -23,16 +24,16 @@
                   "device_id=\"%s\"," \
                   "gateway_id=\"%s\"," \
                   "receiver=\"esp32-gateway\" " \
-                  "sequence_number=%u," \
+                  "sequence_number=%lu," \
                   "rms_voltage=%.2f," \
                   "power=%.2f," \
                   "apparent_power=%.2f," \
                   "energy=%.2f," \
                   "power_factor=%.2f " \
-                  "%ld%09ld\n" // timestamp
+                  "%lld%09ld\n" // timestamp
 
 /* Log template :     time | id |  seq # |  rms voltage |    power |    apparent power |    energy | p factor */
-#define PB_LOG "%ld%09ld ns | %s | #%010u | %10.2f V_rms | %10.2f W | %10.2f W_apparent | %10.2f Wh | %1.2f pf\n"
+#define PB_LOG "%lld%09ld ns | %s | #%010lu | %10.2f V_rms | %10.2f W | %10.2f W_apparent | %10.2f Wh | %1.2f pf\n"
 
 #define get_id_string(id, id_string) for(int i=0; i<6; i++) sprintf(id_string+3*i, "%02x%s", id[i], i<5 ? ":" : "")
 

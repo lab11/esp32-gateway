@@ -16,7 +16,7 @@
 #include "lwip/api.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
-#include "mdns.h"
+#include "lwip/apps/mdns.h"
 #include "wifi.h"
 
 #define TAG "COMPONENT:WIFI"
