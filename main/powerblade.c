@@ -15,6 +15,10 @@
 #include "esp_system.h"
 #include "powerblade.h"
 
+#ifndef UNIVERSAL_MAC_ADDR_NUM
+#include "esp_mac.h"
+#endif
+
 #define TAG "COMPONENT:POWERBLADE"
 
 /* Template Influx string for PowerBlade data */
