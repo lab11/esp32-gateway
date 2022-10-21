@@ -3,4 +3,6 @@
 build/
 sdkconfig
 *.old
+*.lock
+managed_components/
 main/www.h
