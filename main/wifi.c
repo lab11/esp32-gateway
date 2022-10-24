@@ -9,13 +9,15 @@
 
 
 #include <string.h>
-#include "esp_event_loop.h"
+#include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "esp_http_client.h"
 #include "lwip/apps/sntp.h"
 #include "lwip/api.h"
 #include "nvs_flash.h"
 #include "esp_coexist.h"
+#include "esp_event.h"
+#include "esp_netif.h"
 #include "esp_wifi.h"
 #include "esp_log.h"
 #include "mdns.h"
@@ -41,9 +43,8 @@ nvs_handle storage;
 void (* connect_callback)();
 void (* disconnect_callback)();
 
-static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
-    switch(event->event_id) {
-        case SYSTEM_EVENT_STA_START:
+static void wifi_handler(void *ctx, esp_event_base_t event_base, int32_t event_id, void* event_data) {
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
             nvs_open("storage", NVS_READWRITE, &storage);
             size_t ssid_len = 32, pswd_len = 64;
             nvs_get_str(storage, "ssid", (char*)sta_config.sta.ssid, &ssid_len);
@@ -51,8 +52,7 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
             nvs_close(storage);
             esp_wifi_set_config(WIFI_IF_STA, &sta_config);
             esp_wifi_connect();
-            break;
-        case SYSTEM_EVENT_STA_GOT_IP:
+    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
             xEventGroupSetBits(wifi_group, BIT0);
             nvs_open("storage", NVS_READWRITE, &storage);
             nvs_set_str(storage, "ssid", (char*)sta_config.sta.ssid);
@@ -65,33 +65,27 @@ static esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
             initialize_server();      // Serve config page on the local network
             initialize_mdns("ESP32"); // Advertise over mDNS / ZeroConf / Bonjour
             initialize_sntp();        // Set time
-            break;
-        case SYSTEM_EVENT_STA_DISCONNECTED:
+    } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
             ESP_LOGI(TAG, "Disconnected from network");
             esp_wifi_connect();
             xEventGroupClearBits(wifi_group, BIT0);
-            break;
-        // case SYSTEM_EVENT_SCAN_DONE: {
+        // } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_SCAN_DONE) {
         //     uint16_t apCount = 0;
         //     esp_wifi_scan_get_ap_num(&apCount);
         //     if (apCount == 0) {
         //         ESP_LOGI(TAG, "No AP found");
-        //         break;
+        //         return;
         //     }
         //     wifi_ap_record_t *ap_list = (wifi_ap_record_t *)malloc(sizeof(wifi_ap_record_t) * apCount);
         //     if (!ap_list) {
         //         ESP_LOGE(TAG, "malloc error, ap_list is NULL");
-        //         break;
+        //         return;
         //     }
         //     ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&apCount, ap_list));
         //     esp_wifi_scan_stop();
         //     free(ap_list);
-        //     break;
         // }
-        default:
-            break;
     }
-    return ESP_OK;
 }
 
 void initialize_nvs() {
@@ -116,9 +110,11 @@ void initialize_wifi(void (* connect)(), void (* disconnect)()) {
     wifi_group = xEventGroupCreate();
     connect_callback = connect;
     disconnect_callback = disconnect;
-    tcpip_adapter_init();
-    ESP_LOGI(TAG, "Connecting to Wi-Fi network: %s...", sta_config.sta.ssid);
-    ESP_ERROR_CHECK( esp_event_loop_init(wifi_event_handler, NULL) );
+    ESP_ERROR_CHECK( esp_netif_init() );
+    ESP_ERROR_CHECK( esp_event_loop_create_default() );
+    ESP_ERROR_CHECK( esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_handler, NULL) );
+    ESP_ERROR_CHECK( esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_handler, NULL) );
+    esp_netif_create_default_wifi_sta();
     ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
     ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
     ESP_ERROR_CHECK( esp_wifi_set_mode(WIFI_MODE_STA) );

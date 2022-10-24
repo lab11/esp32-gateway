@@ -8,7 +8,7 @@
 */
 
 #include <string.h>
-#include "esp_event_loop.h"
+#include "esp_event.h"
 #include "esp_log.h"
 
 #include "powerblade.h"
