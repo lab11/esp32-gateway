@@ -53,7 +53,7 @@ void get_mac() {
 void log_powerblade_item(powerblade_item *item) {
     char id[17];
     get_id_string(item->id, id);
-    printf(PB_LOG, item->ts, item->tn, id, item->sn, item->vr, item->rp, item->ap, item->wh, item->pf);
+    printf(PB_LOG, (long)item->ts, item->tn, id, item->sn, item->vr, item->rp, item->ap, item->wh, item->pf);
 }
 
 int8_t parse_powerblade_data(uint8_t *id, uint8_t *data, uint8_t length, powerblade_item *item) {
@@ -117,5 +117,5 @@ void powerblade_item_to_influx_string(powerblade_item *item, char *out) {
         get_mac();
     }
     get_id_string(item->id, id);
-    sprintf(out, PB_INFLUX, id, gateway, item->sn, item->vr, item->rp, item->ap, item->wh, item->pf, item->ts, item->tn);
+    sprintf(out, PB_INFLUX, id, gateway, item->sn, item->vr, item->rp, item->ap, item->wh, item->pf, (long)item->ts, item->tn);
 }
