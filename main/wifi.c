@@ -47,11 +47,11 @@ static void wifi_handler(void *ctx, esp_event_base_t event_base, int32_t event_i
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
             nvs_open("storage", NVS_READWRITE, &storage);
             size_t ssid_len = 32, pswd_len = 64;
-            nvs_get_str(storage, "ssid", (char*)sta_config.sta.ssid, &ssid_len);
-            nvs_get_str(storage, "pswd", (char*)sta_config.sta.password, &pswd_len);
+            char ssid_val[32] = "", pswd_val[64] = "";
+            nvs_get_str(storage, "ssid", ssid_val, &ssid_len);
+            nvs_get_str(storage, "pswd", pswd_val, &pswd_len);
             nvs_close(storage);
-            esp_wifi_set_config(WIFI_IF_STA, &sta_config);
-            esp_wifi_connect();
+            set_ssid( ssid_val, pswd_val );
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
             xEventGroupSetBits(wifi_group, BIT0);
             nvs_open("storage", NVS_READWRITE, &storage);
@@ -239,6 +239,7 @@ void http_serve_task(void *pvParameters) {
                             ESP_LOGW(TAG,"Reset");
                             rst = 1;
                         }
+                        nvs_close(storage);
                         sprintf(buf, (const char*) main_www_index_html, ssid, datb, host, xTaskGetTickCount()*portTICK_PERIOD_MS/1000);
                         netconn_write(client, "HTTP/1.1 200 OK\r\n Content-Type:text/html\r\n\r\n", 44, NETCONN_COPY);
                         netconn_write(client, buf, strlen(buf), NETCONN_COPY);
@@ -262,9 +263,11 @@ char* get_ssid() {
 }
 
 void set_ssid(char *ssid_value, char *pswd_value) {
-    strcpy((char*)sta_config.sta.ssid, ssid_value);
-    strcpy((char*)sta_config.sta.password, pswd_value);
-    ESP_LOGI(TAG, "Attempting to connect to '%s'", ssid_value);
+    if (ssid_value[0]) { 
+        strcpy((char*)sta_config.sta.ssid, ssid_value);
+        strcpy((char*)sta_config.sta.password, pswd_value);
+    }
+    ESP_LOGI(TAG, "Attempting to connect to '%s'", (char*)sta_config.sta.ssid);
     esp_wifi_set_config(WIFI_IF_STA, &sta_config);
     esp_wifi_connect();
 }
