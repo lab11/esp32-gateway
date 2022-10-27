@@ -95,11 +95,11 @@ void initialize_nvs() {
         ret = nvs_flash_init();
     }
     nvs_open("storage", NVS_READWRITE, &storage);
-    size_t host_len = 128, cred_len = 32;
+    size_t host_len = 128, datb_len = 32, user_len = 32, pswd_len = 32;
     nvs_get_str(storage, "iflx_host", host, &host_len);
-    nvs_get_str(storage, "iflx_datb", datb, &cred_len);
-    nvs_get_str(storage, "iflx_user", user, &cred_len);
-    nvs_get_str(storage, "iflx_pswd", pswd, &cred_len);
+    nvs_get_str(storage, "iflx_datb", datb, &datb_len);
+    nvs_get_str(storage, "iflx_user", user, &user_len);
+    nvs_get_str(storage, "iflx_pswd", pswd, &pswd_len);
     nvs_close(storage);
     ESP_ERROR_CHECK(ret);
 }
@@ -248,7 +248,6 @@ void http_serve_task(void *pvParameters) {
             }
             netbuf_delete(nb);
         }
-        // ESP_LOGI(TAG,"Closing connection");
         netconn_close(client);
         netconn_delete(client);
         if (rst) {
