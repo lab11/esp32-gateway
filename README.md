@@ -19,11 +19,11 @@ The [ESP32 Applications repo](https://github.com/lab11/esp32-apps) contains sing
 Setup
 -----
 
-To set up the software environment on your machine, follow the [Espressif documentation](https://esp-idf.readthedocs.io/en/latest/get-started/index.html).
+To set up the software environment on your machine, follow the [Espressif documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html).
 
-Connect the device via USB and [find the appropriate serial port](https://esp-idf.readthedocs.io/en/latest/get-started/index.html#configure).
+Connect the device via USB and [find the appropriate serial port](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/establish-serial-connection.html#check-port-on-linux-and-macos).
 
-While in the ESP32 Gateway repo, `make menuconfig` can be used to access the configuration menu, and optionally set default Wi-Fi credentials and InfluxDB endpoint. Hit `Q` to exit.
+While in the ESP32 Gateway repo, `idf.py menuconfig` can be used to access the configuration menu, and optionally set default Wi-Fi credentials and InfluxDB endpoint. Hit `Q` to exit.
 
 Wi-Fi and InfluxDB credentials can also be changed after the gateway is programmed using a phone or browser. View [startup guide](https://docs.google.com/presentation/d/1h3oxfZpgNazQ42Ug1GeqB8SHxXWLkpt178d12G6gJQw/edit?usp=sharing) for instructions.
 
@@ -31,7 +31,7 @@ Wi-Fi and InfluxDB credentials can also be changed after the gateway is programm
 Run
 ---
 
-Use `make all flash monitor` to generate necessary files, build the project, flash the binary to the device, and display serial output from the device.
+Use `idf.py -p <PORT> flash monitor` to generate necessary files, build the project, flash the binary to the device, and display serial output from the device.
 
 Hit `CTRL + ]` to halt serial monitoring.
 
@@ -39,20 +39,20 @@ View [startup guide](https://docs.google.com/presentation/d/1h3oxfZpgNazQ42Ug1Ge
 
 <!--
 
-The follow `make` commands are useful:
+The follow `idf.py` commands are useful:
 
-- `make` | `make build`: Builds project
+- `idf.py` | `idf.py build`: Builds project
 
-- `make all` : Builds project & generates www.h header from www directory
+- `idf.py menuconfig`: Access configuration menu
 
-- `make menuconfig`: Access configuration menu
+- `idf.py flash`: Build project, flash binary to device, & boot device
 
-- `make flash`: Build project, flash binary to device, & boot device
+- `idf.py monitor`: Restart device and display serial output from device
 
-- `make monitor`: Restart device and display serial output from device
+- `idf.py flash monitor`: Build project, flash device
 
-- `make flash monitor`: Build project, flash device
+- `idf.py erase-flash`: Erase flash memory on device
 
-- `make all flash monitor` : Generate www, build project, flash device
+- `idf.py clean`: Cleans build files
 
 -->
